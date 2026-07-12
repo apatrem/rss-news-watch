@@ -17,6 +17,9 @@ each morning. No bypass; just a file you produced on your own disk.
 
 See [`docs/how-it-works.md`](docs/how-it-works.md) for the full picture.
 
+> **Using this yourself?** Fork the repo (or clone and re-init git) so it's *your*
+> copy — then edit `feeds.txt`, the prompt placeholders, and the schedule freely.
+
 ## What's in here
 
 | Path | What it is |
@@ -31,7 +34,8 @@ See [`docs/how-it-works.md`](docs/how-it-works.md) for the full picture.
 ## Quick start (macOS example)
 
 ```bash
-# 1. Get the code
+# 1. Get the code (fork first, then clone your fork so you can commit your own
+#    feeds.txt tweaks; or just clone this one and re-init git)
 git clone https://github.com/apatrem/rss-news-watch.git ~/bin/rss-news-watch
 cd ~/bin/rss-news-watch
 

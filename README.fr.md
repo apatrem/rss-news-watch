@@ -19,6 +19,10 @@ contournement ; juste un fichier posé chez toi.
 
 Voir [`docs/how-it-works.md`](docs/how-it-works.md) pour le détail.
 
+> **Tu veux l'utiliser ?** Fork le repo (ou clone puis réinitialise git) pour en
+> avoir *ta* copie — puis édite `feeds.txt`, les placeholders du prompt et le
+> planning librement.
+
 ## Contenu
 
 | Chemin | Rôle |
@@ -33,7 +37,8 @@ Voir [`docs/how-it-works.md`](docs/how-it-works.md) pour le détail.
 ## Démarrage rapide (exemple macOS)
 
 ```bash
-# 1. Récupérer le code
+# 1. Récupérer le code (fork d'abord, puis clone ton fork pour committer tes
+#    propres réglages de feeds.txt ; ou clone celui-ci et réinitialise git)
 git clone https://github.com/apatrem/rss-news-watch.git ~/bin/rss-news-watch
 cd ~/bin/rss-news-watch
 
