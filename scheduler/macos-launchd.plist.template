@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  TEMPLATE — replace {{REPO_DIR}} with the ABSOLUTE path to your clone,
+  e.g. /Users/you/bin/rss-news-watch  (no trailing slash), then:
+
+    sed "s|{{REPO_DIR}}|$HOME/bin/rss-news-watch|g" \
+      scheduler/macos-launchd.plist.template \
+      > ~/Library/LaunchAgents/com.rss-news-watch.plist
+    launchctl load ~/Library/LaunchAgents/com.rss-news-watch.plist
+
+  It runs the aggregator daily at 07:45 (tweak Hour/Minute below), i.e. just
+  before an 08:00 scheduled LLM task that reads the digest.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.rss-news-watch</string>
+
+    <!-- Python from the dedicated venv (created with: python3 -m venv venv).
+         Do NOT use /usr/bin/python3: feedparser isn't installed there. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{REPO_DIR}}/venv/bin/python3</string>
+        <string>{{REPO_DIR}}/aggregate_feeds.py</string>
+        <string>--feeds</string>
+        <string>{{REPO_DIR}}/feeds.txt</string>
+        <string>--out</string>
+        <string>{{REPO_DIR}}</string>
+        <string>--hours</string>
+        <string>48</string>
+    </array>
+
+    <!-- Every day at 07:45 (just before an 08:00 LLM watch) -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>7</integer>
+        <key>Minute</key>
+        <integer>45</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>{{REPO_DIR}}/launchd-out.log</string>
+    <key>StandardErrorPath</key>
+    <string>{{REPO_DIR}}/launchd-err.log</string>
+</dict>
+</plist>

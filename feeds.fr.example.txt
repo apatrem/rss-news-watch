@@ -1,0 +1,52 @@
+# French / francophone RSS feed list for a daily news watch.
+# Format: Name | URL   (blank lines and lines starting with # are ignored)
+#
+# The script downloads each feed with a browser User-Agent then parses the bytes,
+# which tolerates mislabelled feeds (Content-Type text/html). Check feeds-digest.log.
+#
+# To use: copy this file to feeds.txt in the same folder, then edit freely.
+#   cp feeds.fr.example.txt feeds.txt
+
+# ---------- General news / politics / economy ----------
+Le Monde - À la une   | https://www.lemonde.fr/rss/une.xml
+Le Monde - Économie   | https://www.lemonde.fr/economie/rss_full.xml
+Le Monde - Politique  | https://www.lemonde.fr/politique/rss_full.xml
+Le Monde - Internat.  | https://www.lemonde.fr/international/rss_full.xml
+Le Monde - Sciences   | https://www.lemonde.fr/sciences/rss_full.xml
+Mediapart             | https://www.mediapart.fr/articles/feed
+Courrier International | https://www.courrierinternational.com/feed/all/rss.xml
+Alternatives Écon.    | https://www.alternatives-economiques.fr/rss.xml
+The Economist         | https://www.economist.com/latest/rss.xml
+Politico Europe       | https://www.politico.eu/feed/
+Financial Times       | https://www.ft.com/rss/home
+Rest of World         | https://restofworld.org/feed/full/
+
+# ---------- Les Échos ----------
+Les Échos - Économie       | https://services.lesechos.fr/rss/les-echos-economie.xml
+Les Échos - Tech & Médias  | https://services.lesechos.fr/rss/les-echos-tech-medias.xml
+Les Échos - Entreprises    | https://services.lesechos.fr/rss/les-echos-entreprises.xml
+Les Échos - Start-up       | https://services.lesechos.fr/rss/les-echos-start-up.xml
+Les Échos - Monde          | https://services.lesechos.fr/rss/les-echos-monde.xml
+Les Échos - Finance        | https://services.lesechos.fr/rss/les-echos-finance-marches.xml
+
+# ---------- Science ----------
+# If one of these fails it will show up in feeds-digest.log — fix it here.
+Quanta Magazine       | https://www.quantamagazine.org/feed/
+CNRS Le Journal       | https://lejournal.cnrs.fr/rss
+Scientific American   | http://rss.sciam.com/basic-science
+Ars Technica Science  | https://feeds.arstechnica.com/arstechnica/science
+
+# ---------- Tech & AI ----------
+Techmeme              | https://www.techmeme.com/feed.xml
+Ars Technica          | https://feeds.arstechnica.com/arstechnica/index
+Next                  | https://next.ink/feed
+Sifted                | https://sifted.eu/feed
+Blog du Modérateur    | https://www.blogdumoderateur.com/feed
+JDN                   | https://www.journaldunet.com/rss/
+L'Usine Digitale      | https://www.usine-digitale.fr/arc/outboundfeeds/rss/
+Usine Nouvelle        | https://www.usinenouvelle.com/arc/outboundfeeds/rss/
+
+# ---------- AI coding agents ----------
+# Anthropic has no official feed; this is an unofficial community feed (low frequency).
+Anthropic News (unoff.) | https://tim-hilde.github.io/anthropic-rss/rss.xml
+Hacker News (front)     | https://hnrss.org/frontpage

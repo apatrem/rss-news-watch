@@ -1,0 +1,7 @@
+# Required
+feedparser>=6.0
+
+# Optional but recommended: Chrome TLS impersonation to get past anti-bot
+# firewalls (Cloudflare) used by some paywalled papers. The script works
+# without it (falls back to urllib) but retrieves more feeds with it.
+curl_cffi>=0.7

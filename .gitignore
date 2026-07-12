@@ -1,0 +1,21 @@
+# Python env
+venv/
+__pycache__/
+*.pyc
+
+# Your active feed list (copy an example to create it)
+feeds.txt
+
+# Generated digests and logs (personal / regenerated daily)
+feeds-digest.md
+feeds-digest.json
+feeds-digest.log
+launchd-out.log
+launchd-err.log
+
+# The dedup journal is personal reading history — never commit it
+news-watch-history.md
+historique-veille.md
+
+# OS cruft
+.DS_Store
