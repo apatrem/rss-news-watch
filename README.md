@@ -11,9 +11,14 @@ each morning. No bypass; just a file you produced on your own disk.
 > 🇫🇷 Version française : [README.fr.md](README.fr.md)
 
 ```
-07:45  scheduler → aggregate_feeds.py → feeds-digest.md (+ .json + .log)
-08:00  LLM task  → reads the digest, dedups against history, briefs you in chat
+07:30 daily      scheduler → run-briefing.sh → aggregate_feeds.py → digests/<stamp>.md (+ .json + .log)
+daily or 2×/week LLM task  → reads every unconsumed digest, dedups, briefs you, acknowledges
 ```
+
+**v2** (see [CHANGELOG](CHANGELOG.md)): timestamped digests kept until the task has
+read them, a robust wrapper (network wait, retries, adaptive window, safe purge),
+optional hooks, history archiving — and the briefing can run less often than the
+collection (e.g. Monday and Thursday).
 
 See [`docs/how-it-works.md`](docs/how-it-works.md) for the full picture.
 
@@ -25,6 +30,8 @@ See [`docs/how-it-works.md`](docs/how-it-works.md) for the full picture.
 | Path | What it is |
 |------|-----------|
 | `aggregate_feeds.py` | The aggregator. No hardcoded paths; portable. |
+| `run-briefing.sh` | Daily wrapper: network wait, retries, adaptive window, purge of consumed digests, hooks. |
+| `hooks/post-digest.d/` | Optional add-ons run after each digest (README + example). |
 | `feeds.en.example.txt` | English/international feed list (copy to `feeds.txt`). |
 | `feeds.fr.example.txt` | French/francophone feed list (copy to `feeds.txt`). |
 | `prompts/` | The scheduled-task prompt, EN + FR, with a how-to-wire-it guide. |
@@ -46,32 +53,33 @@ python3 -m venv venv
 # 3. Pick a feed list
 cp feeds.en.example.txt feeds.txt      # or feeds.fr.example.txt
 
-# 4. First run — writes feeds-digest.md / .json / .log here
-./venv/bin/python aggregate_feeds.py
+# 4. First run — writes digests/<stamp>.md (+ .json/.log) and feeds-digest.md here
+./run-briefing.sh
 
-# 5. Check the log and fix any ERROR/EMPTY feed URL in feeds.txt
-cat feeds-digest.log
+# 5. Check the logs and fix any ERROR/EMPTY feed URL in feeds.txt
+cat feeds-digest.log; tail run-briefing.log
 ```
 
-Then schedule it (runs daily at 07:45):
+Then schedule it (runs daily at 07:30 — keep it daily even if the briefing runs less often):
 
 ```bash
 sed "s|{{REPO_DIR}}|$HOME/bin/rss-news-watch|g" \
   scheduler/macos-launchd.plist.template \
   > ~/Library/LaunchAgents/com.rss-news-watch.plist
-launchctl load ~/Library/LaunchAgents/com.rss-news-watch.plist
-# test immediately, without waiting for 07:45:
-launchctl start com.rss-news-watch
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.rss-news-watch.plist
+# test immediately, without waiting for 07:30:
+launchctl kickstart gui/$(id -u)/com.rss-news-watch
 ```
 
 Linux / Windows: see [`scheduler/`](scheduler/).
 
 ## Wire up the LLM task
 
-Open [`prompts/README.md`](prompts/README.md), fill in `{{YOUR_NAME}}` and
-`{{DIGEST_DIR}}` in the EN or FR prompt, and paste it into your assistant's
-scheduled task (set the 08:00 daily schedule there). The connected folder must
-include the repo so the task can read `feeds-digest.md`.
+Open [`prompts/README.md`](prompts/README.md), fill in `{{YOUR_NAME}}`,
+`{{DIGEST_DIR}}` and `{{SCHEDULE}}` in the EN or FR prompt, and paste it into
+your assistant's scheduled task (set its schedule there: daily, or e.g. Monday
+and Thursday). The connected folder must include the repo: the task reads
+`digests/` and writes its acknowledgement to `state.json`.
 
 ## Customizing feeds
 
@@ -82,12 +90,16 @@ ignored. Add or remove freely, then re-run the script and check `feeds-digest.lo
 
 ## Notes
 
-- The machine must be awake at 07:45 for the scheduler to fire; if asleep, the
+- The machine must be awake at 07:30 for the scheduler to fire; if asleep, the
   job runs at wake (launchd) or on next available run (systemd `Persistent`,
-  Windows "run if missed").
+  Windows "run if missed"). A day missed entirely is caught up by the next
+  briefing as far as the feeds still carry it (the window widens up to 10 days).
+- Maintenance: `./run-briefing.sh --dry-run` (what would be purged) and
+  `--purge-only`.
 - A broken feed never blocks the others — it's just logged.
-- `feeds.txt`, the digests, logs, and your dedup history are git-ignored: they're
-  personal or regenerated, not shipped.
+- `feeds.txt`, the digests, extras, logs, `state.json`, your history and archives,
+  personal hooks, cookies and keys are git-ignored: they're personal or
+  regenerated, never shipped.
 
 ## License
 

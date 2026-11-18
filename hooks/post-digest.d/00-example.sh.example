@@ -1,0 +1,10 @@
+#!/bin/bash
+# Minimal post-digest hook template.
+# Copy to a name without ".example" (e.g. 10-my-hook.sh) and chmod +x to enable.
+#   $1 = run stamp (YYYY-MM-DD-HHMM)    $2 = repo directory
+set -eu
+STAMP="$1"; DIR="$2"
+OUT="$DIR/extras/$STAMP"
+mkdir -p "$OUT"
+# Example: count the articles in today's digest.
+grep -c '^- \*\*\[' "$DIR/digests/$STAMP.md" > "$OUT/article-count.txt"
