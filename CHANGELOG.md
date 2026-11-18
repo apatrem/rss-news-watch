@@ -1,5 +1,23 @@
 # Changelog
 
+## v2.1 — 2026-11-18
+
+- **Time-zone-safe acknowledgement.** The task now acks with the stamp of the
+  newest digest it read instead of its own clock (Cowork's sandbox runs in UTC,
+  which made the ack land 1-2 h early in Europe and the morning digest look
+  unconsumed). The ack also refuses to move backwards.
+- **"Nothing new" mode clarified.** No unconsumed digest now always skips the
+  briefing, with two messages: already briefed (latest digest < 24 h) or
+  collection didn't run (older).
+- **Anti-bot fallback made consistent.** The `curl_cffi` fallback no longer
+  forces the fixed User-Agent over its own TLS fingerprint (a classic bot
+  tell). Some sites (Usine Digitale, Usine Nouvelle) still block
+  intermittently; they are logged as ERROR when they do. Rest of World (blocks
+  every automated reader) is commented out in both example lists; Reuters
+  mention removed from the EN prompt.
+- **Small fixes.** Failed hooks log their real exit code; the example hook no
+  longer fails on a digest with 0 articles.
+
 ## v2 — 2026-11
 
 - **Timestamped digests.** Each run writes `digests/YYYY-MM-DD-HHMM.{md,json,log}`;

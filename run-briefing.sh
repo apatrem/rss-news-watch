@@ -64,8 +64,12 @@ mkdir -p "$DIGESTS_DIR" "$EXTRAS_DIR"
 # --------------------------------------------------------------------------
 # state.json — shared memory between this script and the LLM task.
 #   last_feed_run_ok : last successful aggregation      (written here)
-#   last_briefing_ok : last briefing actually produced   (written by the LLM task)
-#   last_briefing_window : period that briefing covered  (written by the LLM task)
+#   last_briefing_ok : stamp of the newest digest the last briefing consumed,
+#                      as YYYY-MM-DDTHH:MM:00 (written by the LLM task). It is
+#                      derived from a digest file name, i.e. from THIS machine's
+#                      clock — never from the task's own clock, whose time zone
+#                      may differ (Cowork's sandbox runs in UTC).
+#   last_briefing_window : stamps that briefing covered  (written by the LLM task)
 # Fallback when state.json is missing: latest date in the history journal.
 # --------------------------------------------------------------------------
 state_get() {
@@ -247,10 +251,12 @@ while [ "$n" -le "$MAX_TRIES" ]; do
     for hook in "$HOOKS_DIR"/*; do
       [ -f "$hook" ] && [ -x "$hook" ] || continue
       log "hook $(basename "$hook")…"
-      if "$hook" "$STAMP" "$DIR" >> "$WLOG" 2>&1; then
+      "$hook" "$STAMP" "$DIR" >> "$WLOG" 2>&1
+      rc=$?   # capture first: any $(...) in the log line below would reset $?
+      if [ "$rc" -eq 0 ]; then
         log "hook $(basename "$hook") OK"
       else
-        log "hook $(basename "$hook") FAILED (code $?) — ignored"
+        log "hook $(basename "$hook") FAILED (code $rc) — ignored"
       fi
     done
   fi

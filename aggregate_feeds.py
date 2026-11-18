@@ -185,8 +185,13 @@ def fetch_bytes(url, timeout=20):
         return data
 
     def via_cffi():
+        # No custom headers here: impersonate="chrome" sends a header set that
+        # matches its TLS fingerprint. Forcing our fixed (older) Chrome User-Agent
+        # on top of a newer fingerprint is exactly the mismatch anti-bot firewalls
+        # look for. (Some sites still block intermittently whatever we send, e.g.
+        # Usine Digitale / Usine Nouvelle: they then show up as ERROR in the log.)
         r = cffi_requests.get(
-            url, headers=dict(req.headers), impersonate="chrome",
+            url, impersonate="chrome",
             timeout=timeout, allow_redirects=True,
         )
         if r.status_code >= 400:

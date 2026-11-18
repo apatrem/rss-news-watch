@@ -32,6 +32,7 @@ Daily, or e.g. Monday and Thursday — scheduled LLM task
   ├─ briefs you in chat, grouped by theme
   ├─ appends the reported items to news-watch-history.md (archives lines > 30 days)
   └─ writes the acknowledgement last_briefing_ok in state.json
+       (= stamp of the newest digest it read — never its own clock, see below)
 ```
 
 The acknowledgement is the hinge of v2. The machine never deletes a digest the
@@ -41,6 +42,13 @@ task hasn't read, so:
 - the task can run less often than the collection (twice a week, say): the
   daily digests simply wait and are briefed together;
 - `RETENTION_DAYS` (30) is a hard cap so nothing piles up forever.
+
+**Why the ack is a digest stamp, not "now".** Digest names use the machine's
+local time, but the LLM task may run in a sandbox on another time zone —
+Claude Cowork's runs in UTC. An ack written with the task's clock would land
+one or two hours early in Europe, and the morning's digest would look
+"unconsumed": briefed twice, purged a cycle late. Using the stamp of the newest
+digest read keeps everything on the machine's own clock.
 
 ## Why the script gets feeds the assistant can't
 

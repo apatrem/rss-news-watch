@@ -7,4 +7,5 @@ STAMP="$1"; DIR="$2"
 OUT="$DIR/extras/$STAMP"
 mkdir -p "$OUT"
 # Example: count the articles in today's digest.
-grep -c '^- \*\*\[' "$DIR/digests/$STAMP.md" > "$OUT/article-count.txt"
+# (grep -c exits 1 when it counts 0 lines: "|| true" keeps set -e from failing the hook.)
+grep -c '^- \*\*\[' "$DIR/digests/$STAMP.md" > "$OUT/article-count.txt" || true

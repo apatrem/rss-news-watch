@@ -22,7 +22,7 @@ The RSS digest can ONLY be produced on {{YOUR_NAME}}'s machine (network access t
   {{DIGEST_DIR}}/digests/YYYY-MM-DD-HHMM.md / .json / .log   ← timestamped digests, kept until consumed
   {{DIGEST_DIR}}/extras/YYYY-MM-DD-HHMM/                      ← optional material from hooks (if any)
   {{DIGEST_DIR}}/feeds-digest.md                              ← copy of the latest run only
-  {{DIGEST_DIR}}/state.json                                   ← last_briefing_ok = date of the last briefing YOU actually produced
+  {{DIGEST_DIR}}/state.json                                   ← last_briefing_ok = stamp of the newest digest a briefing has consumed
 Cleaning is done by run-briefing.sh, never by you. Delete NOTHING in this folder.
 
 Via bash, in this order:
@@ -30,11 +30,18 @@ Via bash, in this order:
 2. List digests/*.md and keep those whose timestamp is LATER than last_briefing_ok: the UNCONSUMED digests.
 3. Pick the mode:
 
-  A. NO unconsumed digest, and the latest one is older than ~24 h
-     → nothing new. Do NOT brief (no WebSearch, no history write, no ack). Output ONLY:
+  A. NO unconsumed digest → nothing new. Do NOT brief (no WebSearch, no history write, no ack). Output ONLY the matching message, then stop:
+
+     A1. The latest digest is less than ~24 h old: a previous briefing already covered it.
 
      ---
-     ⚠️ **Briefing skipped — no unconsumed RSS digest** (latest dated <date>).
+     ℹ️ **Already briefed — no new digest** since the one from <date and time>. The next one will be produced by the next scheduled run of run-briefing.sh.
+     ---
+
+     A2. The latest digest is older than ~24 h (or there is none): collection didn't run.
+
+     ---
+     ⚠️ **Briefing skipped — no recent RSS digest** (latest dated <date>).
      The digest must be regenerated on your machine (I have no network access to the feeds). Run this in a terminal, then re-run the briefing:
 
      ```bash
@@ -56,7 +63,7 @@ Goal: cover in ONE briefing everything since the previous one, without drowning 
 - In the history, each item keeps ITS OWN date (the date of the digest it came from), not today's.
 
 === PRIORITY INPUT: THE LOCAL DIGESTS ===
-- Primary source for publishers you can't fetch (Guardian, BBC, Reuters, NYT, The Economist, Politico, FT, Rest of World, WSJ, Ars Technica, The Verge, Nature, Quanta…).
+- Primary source for publishers you can't fetch (Guardian, BBC, Al Jazeera, NYT, The Economist, Politico, FT, WSJ, Ars Technica, The Verge, Nature, Quanta…).
 - The digest doesn't replace your judgment: select, verify, prioritize. WebSearch to go deeper or to verify.
 - If extras/<stamp>/ exists, read its README or STATUS file first; it may hold full texts or data produced by {{YOUR_NAME}}'s hooks. Attribute every fact to the outlet that actually reported it.
 
@@ -78,22 +85,34 @@ Journal: {{DIGEST_DIR}}/news-watch-history.md (create it if missing).
 === FINAL STEP — ACKNOWLEDGEMENT (MANDATORY, mode B only) ===
 This is what lets run-briefing.sh purge the consumed digests. Forget it and they pile up; write it by mistake and unread material is lost. Do it LAST, after the history write; if the history write failed, do NOT ack.
 
+The ack is the STAMP OF THE NEWEST DIGEST you read, never the current time: your clock may not be in the machine's time zone (Cowork's sandbox runs in UTC), while digest names are in the machine's local time. Run this block as is:
+
 ```bash
 cd {{DIGEST_DIR}}
 python3 - <<'PY'
-import json, os, datetime as dt, tempfile
+import glob, json, os, re, tempfile
 p = "state.json"
 d = json.load(open(p, encoding="utf-8")) if os.path.exists(p) else {}
-now = dt.datetime.now().replace(microsecond=0).isoformat()
-d["last_briefing_window"] = {"from": d.get("last_briefing_ok", ""), "to": now}
-d["last_briefing_ok"] = now
+stamps = sorted(os.path.basename(f)[:-3] for f in glob.glob("digests/*.md")
+                if re.fullmatch(r"\d{4}-\d{2}-\d{2}-\d{4}\.md", os.path.basename(f)))
+if not stamps:
+    raise SystemExit("no digest: ack NOT written")
+s = stamps[-1]
+ack = f"{s[:10]}T{s[11:13]}:{s[13:15]}:00"
+prev = d.get("last_briefing_ok", "")
+if prev and ack <= prev:
+    raise SystemExit(f"digest {s} not newer than last_briefing_ok={prev}: ack NOT written")
+d["last_briefing_window"] = {"from": prev, "to": ack}
+d["last_briefing_ok"] = ack
 fd, tmp = tempfile.mkstemp(dir=".")
 with os.fdopen(fd, "w", encoding="utf-8") as fh:
     json.dump(d, fh, ensure_ascii=False, indent=2); fh.write("\n")
 os.replace(tmp, p)
-print("ack:", now)
+print("ack:", ack, "(digest", s + ")")
 PY
 ```
+
+Check that the digest it prints is the newest one you read. If not (a digest arrived during the briefing), say so in one line at the end of the briefing.
 
 === CONTENT ===
 Domains: 1. Tech & AI  2. Economy  3. Politics (national + international)  4. Science  5. General news  6. AI coding agents (dedicated section).

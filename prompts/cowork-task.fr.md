@@ -22,7 +22,7 @@ Le digest RSS ne peut être produit QUE sur la machine de {{YOUR_NAME}} (accès 
   {{DIGEST_DIR}}/digests/AAAA-MM-JJ-HHMM.md / .json / .log   ← digests horodatés, conservés jusqu'à consommation
   {{DIGEST_DIR}}/extras/AAAA-MM-JJ-HHMM/                      ← matière optionnelle produite par des hooks (s'il y en a)
   {{DIGEST_DIR}}/feeds-digest.md                              ← copie du dernier run seulement
-  {{DIGEST_DIR}}/state.json                                   ← last_briefing_ok = date du dernier briefing que TU as réellement produit
+  {{DIGEST_DIR}}/state.json                                   ← last_briefing_ok = horodatage du dernier digest consommé par une veille
 Le nettoyage est fait par run-briefing.sh, jamais par toi. Ne supprime RIEN dans ce dossier.
 
 Via bash, dans cet ordre :
@@ -30,11 +30,18 @@ Via bash, dans cet ordre :
 2. Liste digests/*.md et retiens ceux dont l'horodatage est POSTÉRIEUR à last_briefing_ok : les digests NON CONSOMMÉS.
 3. Choisis le mode :
 
-  A. AUCUN digest non consommé, et le plus récent a plus de ~24 h
-     → rien de neuf. Ne fais PAS la veille (pas de WebSearch, pas d'écriture dans l'historique, pas d'accusé). Affiche UNIQUEMENT :
+  A. AUCUN digest non consommé → rien de neuf. Ne fais PAS la veille (pas de WebSearch, pas d'écriture dans l'historique, pas d'accusé). Affiche UNIQUEMENT le message qui correspond, puis arrête-toi :
+
+     A1. Le digest le plus récent a moins de ~24 h : il a déjà été traité par une veille précédente.
 
      ---
-     ⚠️ **Veille non lancée — aucun digest RSS non consommé** (le plus récent date du <date>).
+     ℹ️ **Veille déjà faite — pas de nouveau digest** depuis celui du <date et heure>. Le prochain sera produit au prochain passage planifié de run-briefing.sh.
+     ---
+
+     A2. Le digest le plus récent a plus de ~24 h (ou il n'y en a aucun) : la collecte n'a pas tourné.
+
+     ---
+     ⚠️ **Veille non lancée — aucun digest RSS récent** (le plus récent date du <date>).
      Le digest doit être régénéré sur ta machine (je n'ai pas accès réseau aux flux). Lance ceci dans un terminal, puis relance la veille :
 
      ```bash
@@ -78,22 +85,34 @@ Journal : {{DIGEST_DIR}}/news-watch-history.md (crée-le s'il manque).
 === ÉTAPE FINALE — ACCUSÉ DE RÉCEPTION (OBLIGATOIRE, mode B seulement) ===
 C'est ce qui autorise run-briefing.sh à purger les digests consommés. Oublié : ils s'accumulent. Écrit à tort : de la matière non lue est perdue. À faire EN DERNIER, après l'écriture de l'historique ; si celle-ci a échoué, n'écris PAS l'accusé.
 
+L'accusé est l'HORODATAGE DU DIGEST LE PLUS RÉCENT que tu as lu, jamais l'heure courante : ton horloge n'est pas forcément dans le fuseau de la machine (la sandbox Cowork tourne en UTC), alors que les noms des digests sont en heure locale. Exécute ce bloc tel quel :
+
 ```bash
 cd {{DIGEST_DIR}}
 python3 - <<'PY'
-import json, os, datetime as dt, tempfile
+import glob, json, os, re, tempfile
 p = "state.json"
 d = json.load(open(p, encoding="utf-8")) if os.path.exists(p) else {}
-now = dt.datetime.now().replace(microsecond=0).isoformat()
-d["last_briefing_window"] = {"from": d.get("last_briefing_ok", ""), "to": now}
-d["last_briefing_ok"] = now
+stamps = sorted(os.path.basename(f)[:-3] for f in glob.glob("digests/*.md")
+                if re.fullmatch(r"\d{4}-\d{2}-\d{2}-\d{4}\.md", os.path.basename(f)))
+if not stamps:
+    raise SystemExit("aucun digest : accusé NON écrit")
+s = stamps[-1]
+ack = f"{s[:10]}T{s[11:13]}:{s[13:15]}:00"
+prev = d.get("last_briefing_ok", "")
+if prev and ack <= prev:
+    raise SystemExit(f"digest {s} pas plus récent que last_briefing_ok={prev} : accusé NON écrit")
+d["last_briefing_window"] = {"from": prev, "to": ack}
+d["last_briefing_ok"] = ack
 fd, tmp = tempfile.mkstemp(dir=".")
 with os.fdopen(fd, "w", encoding="utf-8") as fh:
     json.dump(d, fh, ensure_ascii=False, indent=2); fh.write("\n")
 os.replace(tmp, p)
-print("ack:", now)
+print("ack:", ack, "(digest", s + ")")
 PY
 ```
+
+Vérifie que le digest affiché est bien le plus récent de ceux que tu as lus. Sinon (un digest est arrivé pendant la veille), signale-le en une ligne à la fin du briefing.
 
 === CONTENU ===
 Domaines : 1. Tech & IA  2. Économie  3. Politique (France + international)  4. Science  5. Actualité générale  6. Agents IA de codage (section dédiée).
