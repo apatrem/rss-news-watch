@@ -7,37 +7,31 @@
     sed "s|{{REPO_DIR}}|$HOME/bin/rss-news-watch|g" \
       scheduler/macos-launchd.plist.template \
       > ~/Library/LaunchAgents/com.rss-news-watch.plist
-    launchctl load ~/Library/LaunchAgents/com.rss-news-watch.plist
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.rss-news-watch.plist
 
-  It runs the aggregator daily at 07:45 (tweak Hour/Minute below), i.e. just
-  before an 08:00 scheduled LLM task that reads the digest.
+  It runs run-briefing.sh every day at 07:30 (tweak Hour/Minute below). Keep it
+  DAILY even if your LLM task runs only a few times a week: the digests pile up
+  in digests/ and are consumed together by the next briefing.
+  The wrapper waits for the network and retries, so 07:30 leaves margin before
+  an 08:00+ LLM task.
 -->
 <plist version="1.0">
 <dict>
     <key>Label</key>
     <string>com.rss-news-watch</string>
 
-    <!-- Python from the dedicated venv (created with: python3 -m venv venv).
-         Do NOT use /usr/bin/python3: feedparser isn't installed there. -->
     <key>ProgramArguments</key>
     <array>
-        <string>{{REPO_DIR}}/venv/bin/python3</string>
-        <string>{{REPO_DIR}}/aggregate_feeds.py</string>
-        <string>--feeds</string>
-        <string>{{REPO_DIR}}/feeds.txt</string>
-        <string>--out</string>
-        <string>{{REPO_DIR}}</string>
-        <string>--hours</string>
-        <string>48</string>
+        <string>/bin/bash</string>
+        <string>{{REPO_DIR}}/run-briefing.sh</string>
     </array>
 
-    <!-- Every day at 07:45 (just before an 08:00 LLM watch) -->
     <key>StartCalendarInterval</key>
     <dict>
         <key>Hour</key>
         <integer>7</integer>
         <key>Minute</key>
-        <integer>45</integer>
+        <integer>30</integer>
     </dict>
 
     <key>RunAtLoad</key>

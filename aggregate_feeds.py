@@ -10,13 +10,17 @@ your LLM task can read. The scheduled LLM task then reads that file — no bypas
 just a file dropped on your own disk.
 
 Outputs (in OUTPUT_DIR):
-  - feeds-digest.md    : readable digest (for you and for the LLM task)
-  - feeds-digest.json  : same content, structured
-  - feeds-digest.log   : per-feed status (OK / item count / errors) — to fix URLs
+  - digests/YYYY-MM-DD-HHMM.{md,json,log} : timestamped ORIGINAL of each run, kept until
+      the LLM task has consumed it (see run-briefing.sh). This is what lets the task
+      catch up after a day off, or run only a few times a week. Never purged here.
+  - feeds-digest.md    : copy of the latest run — readable digest
+  - feeds-digest.json  : copy of the latest run, structured
+  - feeds-digest.log   : copy of the latest run — per-feed status (OK / item count / errors)
 
 Usage:
   python3 aggregate_feeds.py
   python3 aggregate_feeds.py --hours 48 --feeds /path/feeds.txt --out "/path/output"
+  python3 aggregate_feeds.py --stamp 2026-08-26-0730     # force the run timestamp
 
 Config:
   Output dir default = RSS_WATCH_DIR env var, else the script's own directory.
@@ -258,10 +262,15 @@ def main():
     ap.add_argument("--hours", type=int, default=48, help="Time window in hours (default 48).")
     ap.add_argument("--feeds", default=DEFAULT_FEEDS, help="Path to feeds.txt.")
     ap.add_argument("--out", default=DEFAULT_OUT, help="Output directory.")
+    ap.add_argument("--stamp", default=None,
+                    help="Run timestamp YYYY-MM-DD-HHMM (default: now). Names the files in digests/.")
     args = ap.parse_args()
 
     out_dir = os.path.expanduser(args.out)
     os.makedirs(out_dir, exist_ok=True)
+    stamp = args.stamp or dt.datetime.now().strftime("%Y-%m-%d-%H%M")
+    digests_dir = os.path.join(out_dir, "digests")
+    os.makedirs(digests_dir, exist_ok=True)
 
     cutoff = dt.datetime.now(tz=dt.timezone.utc) - dt.timedelta(hours=args.hours)
     feeds = load_feeds(args.feeds)
@@ -301,31 +310,38 @@ def main():
         md.append("")
     md_text = "\n".join(md)
 
-    with open(os.path.join(out_dir, "feeds-digest.md"), "w", encoding="utf-8") as fh:
-        fh.write(md_text)
-
     # --- Write JSON -----------------------------------------------------------
     json_items = []
     for it in all_items:
         j = {k: v for k, v in it.items() if k != "_dt"}
         json_items.append(j)
-    with open(os.path.join(out_dir, "feeds-digest.json"), "w", encoding="utf-8") as fh:
-        json.dump(
-            {"generated": dt.datetime.now().isoformat(), "window_hours": args.hours, "items": json_items},
-            fh,
-            ensure_ascii=False,
-            indent=2,
-        )
+    json_text = json.dumps(
+        {
+            "generated": dt.datetime.now().isoformat(),
+            "stamp": stamp,
+            "window_hours": args.hours,
+            "item_count": len(all_items),
+            "items": json_items,
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
 
     # --- Write log ------------------------------------------------------------
     log_text = "\n".join(log_lines)
-    with open(os.path.join(out_dir, "feeds-digest.log"), "w", encoding="utf-8") as fh:
-        fh.write(log_text + "\n")
+
+    # --- Write: timestamped original in digests/ + latest copy at the root -----
+    for ext, text in (("md", md_text), ("json", json_text), ("log", log_text + "\n")):
+        for path in (os.path.join(digests_dir, f"{stamp}.{ext}"),
+                     os.path.join(out_dir, f"feeds-digest.{ext}")):
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(text)
 
     # Console output (useful on the first test run).
     print(log_text)
     print("-" * 60)
-    print(f"OK → {os.path.join(out_dir, 'feeds-digest.md')} ({len(all_items)} articles)")
+    print(f"OK → {os.path.join(digests_dir, stamp + '.md')} ({len(all_items)} articles)")
+    print(f"     latest copy → {os.path.join(out_dir, 'feeds-digest.md')}")
 
 
 if __name__ == "__main__":

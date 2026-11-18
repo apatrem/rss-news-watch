@@ -11,7 +11,8 @@ Both are **templates**. Before using, replace:
 | Placeholder     | With                                                            |
 |-----------------|-----------------------------------------------------------------|
 | `{{YOUR_NAME}}` | your first name                                                 |
-| `{{DIGEST_DIR}}`| absolute path where `aggregate_feeds.py` writes the digest, e.g. `/Users/you/bin/rss-news-watch` |
+| `{{DIGEST_DIR}}`| absolute path of the repo, where `run-briefing.sh` writes `digests/`, e.g. `/Users/you/bin/rss-news-watch` |
+| `{{SCHEDULE}}`  | when the task runs, e.g. `every morning` or `Monday and Thursday mornings` |
 
 The prompt is provider-agnostic — it just asks the model to read a local file,
 dedup against a history file, and produce a briefing. Below is how to wire it
@@ -26,9 +27,13 @@ A Cowork scheduled task lives on disk at:
 ```
 
 The front-matter (`name`, `description`) plus the body **are** the task prompt.
-Create the task from the Cowork UI (set the 08:00 daily schedule there), then
-paste the filled-in prompt as the task's instructions. The connected folder must
-include `{{DIGEST_DIR}}` so the task can read `feeds-digest.md`.
+Create the task from the Cowork UI (set its schedule there: daily, or e.g.
+Monday and Thursday), then paste the filled-in prompt as the task's
+instructions. The connected folder must include `{{DIGEST_DIR}}`: the task
+reads `digests/`, writes the history and the acknowledgement in `state.json`.
+
+Keep `run-briefing.sh` scheduled **daily** on your machine whatever the task's
+schedule: unconsumed digests wait in `digests/` and are briefed together.
 
 ## ChatGPT (Tasks)
 
@@ -36,7 +41,9 @@ ChatGPT Tasks can't read a file on your disk directly. Two options:
 - Put the digest somewhere the assistant can reach (a synced cloud folder it has
   a connector for), and point `{{DIGEST_DIR}}` at that, **or**
 - Paste the day's `feeds-digest.md` into the task run. The rest of the prompt
-  (dedup, formatting, domain structure) works unchanged.
+  (dedup, formatting, domain structure) works unchanged, but the acknowledgement
+  step can't write `state.json`: run `./run-briefing.sh --purge-only` yourself
+  now and then, or rely on the 30-day retention cap.
 
 ## Any other LLM / self-hosted agent
 

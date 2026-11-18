@@ -2,6 +2,13 @@
 
 Run the aggregator every day at 07:45, writing the digest into the repo folder.
 
+> **v2 note.** `run-briefing.sh` (network wait, retries, purge of consumed
+> digests, hooks) is a bash script. On Windows, run it through **Git Bash** or
+> **WSL** for the full v2 behaviour (program: `C:\Program Files\Git\bin\bash.exe`,
+> argument: the path to `run-briefing.sh`). The plain-Python setup below still
+> works: it writes `digests/<stamp>.md` and `feeds-digest.md`, but nothing is
+> ever purged — clean `digests/` by hand from time to time.
+
 Assuming the repo is at `%USERPROFILE%\bin\rss-news-watch` with a venv
 (`py -m venv venv` then `venv\Scripts\python -m pip install feedparser`).
 

@@ -10,26 +10,37 @@ empty. That makes a "read my feeds and brief me" task unreliable.
 ## The workaround
 
 Run the fetching **on your own machine**, where there is no blocklist. A tiny
-Python script aggregates your feeds into a plain local file. Your scheduled LLM
-task then reads *that file* — no bypass, no scraping through the assistant, just
-a file you produced sitting in a folder the assistant can already see.
+Python script aggregates your feeds into plain local files. Your scheduled LLM
+task then reads *those files* — no bypass, no scraping through the assistant,
+just files you produced sitting in a folder the assistant can already see.
+
+## The pipeline (v2)
 
 ```
-07:45  scheduler (launchd/cron/Task Scheduler)
-         └─> aggregate_feeds.py
-               ├─ downloads each feed (browser User-Agent, gzip, TLS-impersonation fallback)
-               ├─ keeps items from the last 48h
-               └─ writes:  feeds-digest.md   (readable digest — what the LLM reads)
-                           feeds-digest.json (structured)
-                           feeds-digest.log  (per-feed OK / ERROR / EMPTY)
+07:30 every day — scheduler (launchd / cron / systemd / Task Scheduler)
+  └─> run-briefing.sh
+        ├─ purges digests the LLM task has already consumed (state.json)
+        ├─ waits for the network (laptops waking up), retries if the digest is empty
+        ├─ aggregate_feeds.py  → digests/<stamp>.md/.json/.log   (+ latest copy feeds-digest.*)
+        │     window: 48 h, widened automatically after a gap (max 10 days)
+        └─ optional hooks      → extras/<stamp>/                 (your own add-ons)
 
-08:00  scheduled LLM task (Cowork / ChatGPT / other)
-         ├─ reads feeds-digest.md   (primary source)
-         ├─ reads feeds-digest.log  (flags dead feeds back to you)
-         ├─ dedups against news-watch-history.md
-         ├─ optionally WebSearches to verify / go deeper
-         └─ delivers the briefing in chat, then appends today's items to history
+Daily, or e.g. Monday and Thursday — scheduled LLM task
+  ├─ lists the UNCONSUMED digests (later than state.json → last_briefing_ok)
+  ├─ none?  → says so in one line and stops
+  ├─ reads them all, dedups across days and against news-watch-history.md
+  ├─ briefs you in chat, grouped by theme
+  ├─ appends the reported items to news-watch-history.md (archives lines > 30 days)
+  └─ writes the acknowledgement last_briefing_ok in state.json
 ```
+
+The acknowledgement is the hinge of v2. The machine never deletes a digest the
+task hasn't read, so:
+
+- a day the computer was off, or the task didn't run, is caught up next time;
+- the task can run less often than the collection (twice a week, say): the
+  daily digests simply wait and are briefed together;
+- `RETENTION_DAYS` (30) is a hard cap so nothing piles up forever.
 
 ## Why the script gets feeds the assistant can't
 
@@ -43,18 +54,36 @@ a file you produced sitting in a folder the assistant can already see.
    is blocked by a Cloudflare-style anti-bot firewall. If `curl_cffi` isn't
    installed, it simply skips that fallback.
 
-A broken feed never blocks the others — it's logged as `ERROR`/`EMPTY` in
-`feeds-digest.log`, which the morning task surfaces so you can fix the URL in
-`feeds.txt`.
+A broken feed never blocks the others — it's logged as `ERROR`/`EMPTY` in the
+digest log, which the task surfaces so you can fix the URL in `feeds.txt`.
 
-## Files the assistant reads vs. writes
+## Hooks
 
-| File                     | Produced by      | Role                                   |
-|--------------------------|------------------|----------------------------------------|
-| `feeds-digest.md`        | script (daily)   | primary input to the LLM task          |
-| `feeds-digest.json`      | script (daily)   | structured version of the same         |
-| `feeds-digest.log`       | script (daily)   | feed health, surfaced by the task      |
-| `news-watch-history.md`  | the LLM task     | dedup journal, appended each run        |
+Every executable in `hooks/post-digest.d/` runs after a successful aggregation,
+as `<hook> <stamp> <repo_dir>`, and should write to `extras/<stamp>/`. That
+material is purged together with its digest once consumed. Use hooks for
+anything you are entitled to fetch (open-access full texts, your own
+subscriptions, APIs you have a key for). Personal hooks, cookies and keys are
+git-ignored. See [`../hooks/post-digest.d/README.md`](../hooks/post-digest.d/README.md).
 
-`feeds.txt` is your active feed list (copied from one of the `*.example.txt`).
-All of the above are git-ignored — they're personal/generated, not shipped.
+## Files
+
+| File / folder                 | Written by        | Role                                              |
+|-------------------------------|-------------------|---------------------------------------------------|
+| `digests/<stamp>.md/.json/.log` | `aggregate_feeds.py` | the digests the task reads, kept until consumed |
+| `feeds-digest.md/.json/.log`  | `aggregate_feeds.py` | copy of the latest run (handy to read by hand)  |
+| `extras/<stamp>/`             | your hooks        | optional extra material                           |
+| `state.json`                  | both              | `last_feed_run_ok` (script), `last_briefing_ok` (task) |
+| `news-watch-history.md`       | the LLM task      | dedup journal, one line per reported item          |
+| `archives/`                   | the LLM task      | history lines older than 30 days, by month        |
+| `run-briefing.log`            | `run-briefing.sh` | what the wrapper did, run by run                  |
+
+All of the above are git-ignored — they're personal or generated, not shipped.
+
+## Maintenance commands
+
+```bash
+./run-briefing.sh --dry-run      # what would be purged right now (deletes nothing)
+./run-briefing.sh --purge-only   # purge consumed material without fetching
+tail -30 run-briefing.log        # last runs
+```

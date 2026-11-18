@@ -6,16 +6,36 @@ __pycache__/
 # Your active feed list (copy an example to create it)
 feeds.txt
 
-# Generated digests and logs (personal / regenerated daily)
+# Generated digests, extras and logs (personal / regenerated daily)
 feeds-digest.md
 feeds-digest.json
 feeds-digest.log
+digests/
+extras/
+fulltext/
+run-briefing.log
 launchd-out.log
 launchd-err.log
 
-# The dedup journal is personal reading history — never commit it
+# Shared state and reading history — personal, never commit
+state.json
 news-watch-history.md
 historique-veille.md
+archives/
 
-# OS cruft
+# Personal hooks (only the README and *.example templates are tracked)
+hooks/post-digest.d/*
+!hooks/post-digest.d/README.md
+!hooks/post-digest.d/*.example
+
+# Secrets — session cookies, API keys, tokens
+*cookie*
+*.cookies
+.env
+*.key
+*token*
+
+# Backups and OS cruft
+*.bak
+*.bak-*
 .DS_Store
